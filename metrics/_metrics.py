@@ -1,6 +1,7 @@
 from sklearn.metrics import rand_score
 import numpy as np
 from scipy.optimize import linprog
+from scipy.optimize import linear_sum_assignment
 
 def dual_rand(c1, c2):
   return 1 - rand_score(c1,c2)
@@ -127,3 +128,46 @@ def approx_rand(m1, m2, alpha=0.0):
       val = 1 - pair_distance(mr1[x,y], mr2[x,y], alpha)
       res += val
   return res/(mr1.shape[0]*mr1.shape[1])
+
+def partition_distance(C1, C2):
+  clusters1 = np.unique(C1)
+  clusters2 = np.unique(C2)
+
+  dists = np.zeros((len(clusters1), len(clusters2)))
+  for c1 in range(len(clusters1)):
+    idx1 = set(np.where(C1 == clusters1[c1])[0])
+    for c2 in range(len(clusters2)):
+      idx2 = set(np.where(C2 == clusters2[c2])[0])
+      idx = (idx1 - idx2).union(idx2 - idx1)
+      dists[c1,c2] = len(idx)
+  print(dists)
+  
+  row_ind, col_ind = linear_sum_assignment(dists)
+  print(row_ind, col_ind)
+  return dists[row_ind, col_ind].sum()/(2*len(C1))
+
+
+def to_cluster_indicator(m, c):
+  mass = np.zeros(4)
+
+  mass[0] = m[frozenset()]
+  mass[1] = m[frozenset([c])]
+  for s in m:
+    if c not in s and s != frozenset():
+      mass[2] += m[s]
+    elif c in s and s != frozenset([c]):
+      mass[3] += m[s]
+
+  return mass
+
+def evid_partition_distance(M1, M2, n_clusters1, n_clusters2, alpha=0.0):
+  dists = np.zeros((n_clusters1, n_clusters2))
+  for c1 in range(n_clusters1):
+    for c2 in range(n_clusters2):
+      for i in range(len(M1)):
+         m1 = to_cluster_indicator(M1[i], c1)
+         m2 = to_cluster_indicator(M2[i], c2)
+         dists[c1,c2] += pair_distance(m1, m2, alpha)
+
+  row_ind, col_ind = linear_sum_assignment(dists)
+  return dists[row_ind, col_ind].sum()/(2*len(M1))
