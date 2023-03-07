@@ -26,7 +26,7 @@ class EvidentialCMeans(BaseEstimator,ClusterMixin):
 
   def fit(self, X, y=None):
     self.pset = powerset(range(self.n_clusters))
-    self.base_centroids = resample(X, replace=False, n_samples=self.n_clusters)
+    self.base_centroids = resample(X, replace=False, n_samples=self.n_clusters, random_state=self.random_state)
 
     self.centroids = {}
     for s in self.pset:
