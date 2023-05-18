@@ -1,5 +1,6 @@
 from itertools import chain, combinations
 import numpy as np
+from sklearn.model_selection import train_test_split
 
 def powerset(iterable):
     """
@@ -40,7 +41,7 @@ def tw_layer_single(y_in, epsilon, alpha):
       decision = s
   return decision
 
-def conformal_correction(clf, X, y, X_test, epsilon, max_n, superset=False):
+def conformal_correction(clf, X, y, X_test, epsilon, max_n, alpha, superset=False):
     X_train, X_valid, y_train, y_valid = train_test_split(X, y, train_size=0.90, random_state=0)
     clf.fit(X_train, y_train)
 
@@ -123,7 +124,7 @@ def conformal_correction_alt(clf, X, y, X_test, max_n, superset=False):
 
     return pvalues, scores_test
 
-def conformal_to_tw(pvalues, epsilon):
+def conformal_to_tw(pvalues, epsilon, alpha):
   y_pred = []
   for i in range(pvalues.shape[0]):
     ps = np.zeros(pvalues.shape[1])
