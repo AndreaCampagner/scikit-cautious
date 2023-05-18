@@ -172,7 +172,7 @@ def sample_evid(m, samples=100):
         else:
           vals.append(s)
         probs.append(m[j][s])
-      arr.append(np.random.choice(vals, p=probs))
+      arr.append(np.random.choice(vals, p=probs/np.sum(probs)))
     arr_t = tuple(arr)
     if arr_t in arrs:
       counts[arr_t] += 1
