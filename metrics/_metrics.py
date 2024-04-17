@@ -1,4 +1,4 @@
-from sklearn.metrics import rand_score
+from sklearn.metrics import rand_score, accuracy_score, recall_score, precision_score
 import numpy as np
 from scipy.optimize import linprog
 from scipy.optimize import linear_sum_assignment
@@ -303,29 +303,29 @@ def transport_evid(m1, m2, metric=dual_rand, alpha = 0):
   return linprog(c=c, A_eq=A_eq, b_eq=b_eq, bounds=bounds, method='interior-point').fun
 
 
+def pair_distance(mxy1, mxy2, alpha=0.0):
+  #e s ns a
+  c = [0, 1, 1, 1,
+        1, 0, 1, alpha,
+        1, 1, 0, alpha,
+        1, alpha, alpha, 0]
+  
+  A_eq = [[1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0],
+          [0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0],
+          [0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],
+          [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],
+          [0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0],
+          [0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0],
+          [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1],
+          [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]]
+
+  bounds = [(0,1)]*16
+  return linprog(c=c, A_eq=A_eq, b_eq=list(mxy1)+list(mxy2)+[1], bounds=bounds, method='interior-point').fun
+
 def approx_rand(m1, m2, alpha=0.0):
   mr1 = to_pairwise(m1)
   mr2 = to_pairwise(m2)
-
-  def pair_distance(mxy1, mxy2, alpha=0.0):
-    #e s ns a
-    c = [0, 1, 1, 1,
-         1, 0, 1, alpha,
-         1, 1, 0, alpha,
-         1, alpha, alpha, 0]
-    
-    A_eq = [[1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],
-            [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],
-            [0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0],
-            [0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0],
-            [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1],
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]]
-
-    bounds = [(0,1)]*16
-    return linprog(c=c, A_eq=A_eq, b_eq=list(mxy1)+list(mxy2)+[1], bounds=bounds, method='interior-point').fun
 
   res = 0
   for x in range(mr1.shape[0]):
@@ -376,3 +376,55 @@ def evid_partition_distance(M1, M2, n_clusters1, n_clusters2, alpha=0.0):
 
   row_ind, col_ind = linear_sum_assignment(dists)
   return dists[row_ind, col_ind].sum()/(2*len(M1))
+
+
+def hc_accuracy(clf, X_test, y_test, th=0.75):
+  y_pred =  clf.predict_proba(X_test)[:,1]
+  check = (y_pred >= th) | (y_pred <= 1-th)
+  y_pred = clf.predict(X_test)
+  y_pred = y_pred[check]
+  if len(y_pred) == 0 or len(y_test[check]) == 0:
+    return 1
+  return accuracy_score(y_test[check], y_pred)
+
+def hc_sens(clf, X_test, y_test, th=0.75):
+  y_pred =  clf.predict_proba(X_test)[:,1]
+  check = (y_pred >= th) | (y_pred <= 1-th)
+  y_pred = clf.predict(X_test)
+  y_pred = y_pred[check]
+  if len(y_pred) == 0 or len(y_test[check]) == 0:
+    return 1
+  return recall_score(y_test[check], y_pred)
+
+def hc_spec(clf, X_test, y_test, th=0.75):
+  y_pred =  clf.predict_proba(X_test)[:,1]
+  check = (y_pred >= th) | (y_pred <= 1-th)
+  y_pred = clf.predict(X_test)
+  y_pred = y_pred[check]
+  if len(y_pred) == 0 or len(y_test[check]) == 0:
+    return 1
+  return recall_score(y_test[check], y_pred, pos_label=0)
+
+def hc_ppv(clf, X_test, y_test, th=0.75):
+  y_pred =  clf.predict_proba(X_test)[:,1]
+  check = (y_pred >= th) | (y_pred <= 1-th)
+  y_pred = clf.predict(X_test)
+  y_pred = y_pred[check]
+  if len(y_pred) == 0 or len(y_test[check]) == 0:
+    return 1
+  return precision_score(y_test[check], y_pred)
+
+def hc_npv(clf, X_test, y_test, th=0.75):
+  y_pred =  clf.predict_proba(X_test)[:,1]
+  check = (y_pred >= th) | (y_pred <= 1-th)
+  y_pred = clf.predict(X_test)
+  y_pred = y_pred[check]
+  if len(y_pred) == 0 or len(y_test[check]) == 0:
+    return 1
+  return precision_score(y_test[check], y_pred, pos_label=0)
+
+def coverage(clf, X_test, y_test, th=0.75):
+  y_pred =  clf.predict_proba(X_test)[:,1]
+  check = (y_pred >= th) | (y_pred <= 1-th)
+  y_pred = y_pred[check]
+  return len(y_pred)/len(y_test)
